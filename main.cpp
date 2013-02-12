@@ -1,6 +1,8 @@
 ////////////////////////////////////
 //
 //	Graph drawing in 3D using forces
+//	by Albert Martinez github.com/albertnez
+//	12/2/2013
 //
 ////////////////////////////////////
 
@@ -12,7 +14,7 @@
 #include <iostream>
 
 
-//OpenGL
+//include openGL
 #ifdef __APPLE__
 #include <OpenGL/OpenGL.h>
 #include <GLUT/glut.h>
@@ -20,12 +22,11 @@
 #include <GL/glut.h>
 #endif
 
-#include "Vec.h"
+//Vec and graph
+#include "Vec3d.h"
 #include "Graph.h"
 
 using namespace std;
-
-
 
 const int screenWidth = 900;
 const int screenHeight = 600;
@@ -33,15 +34,12 @@ const short RADIUS = 5;
 
 const int margin = 1500;
 
-
-bool mouseLeftDown = false;
-bool mouseRightDown = false;
-
 int K;
 double t = 60;
 
-float angleX = 0;
-float angleY = 0;
+//Mouse variables
+bool mouseLeftDown = false;
+bool mouseRightDown = false;
 
 float mouseX = 0;
 float mouseY = 0;
@@ -49,14 +47,20 @@ float mouseY = 0;
 float posX = 0;
 float posY = 0;
 
-float Zoom = 0;
+float Zoom = -15;
+
+float angleX = 0;
+float angleY = 0;
+
+bool autoRotate = false;
+
 
 
 //global graf
 Graph g;
 
 
-
+void update(int value);
 
 
 double Fa (const double& d) {
@@ -69,9 +73,20 @@ double Fr (const double& d) {
 
 
 //Called when a key is pressed
-void handleKeypress(unsigned char key, int x, int y) {    //The current mouse coordinates
+
+//S to stop
+//Space to add temperature
+//R to Reset view angle
+//T to toggle autorotate on/off
+//Left button (hold) to rotate
+//Right button (hold) to move (a bit messy)
+void handleKeypress(unsigned char key, int x, int y) {    
 	switch (key) {
     case 27: exit(0); break;
+    case 's': t = 0; break;
+    case ' ': t += 10; break;
+    case 'r': angleX = angleY = 0; break;
+    case 't': autoRotate = !autoRotate; break;
   }
 }
 
@@ -101,8 +116,8 @@ void mouseMotionCB(int x, int y)
     }
     else if(mouseRightDown)
     {
-    	posX += (x - mouseX)*0.01;
-    	posY -= (y - mouseY)*0.01;
+    	posX += (x - mouseX)*0.1;
+    	posY -= (y - mouseY)*0.1;
     	mouseX = x;
     	mouseY = y;
     	glutPostRedisplay();
@@ -114,24 +129,17 @@ void mouseMotionCB(int x, int y)
 void initRendering() {
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_COLOR_MATERIAL);
-
+/*
 	//lighting
 	glEnable(GL_LIGHTING); //Enable lighting
-	glEnable(GL_LIGHT0); //Enable light #0
-	//glEnable(GL_LIGHT1); //Enable light #1
-	glEnable(GL_NORMALIZE); //Automatically normalize normals
-
+	//glEnable(GL_LIGHT0); //light 0
+	//glEnable(GL_LIGHT1); 
+	glEnable(GL_NORMALIZE); //Automatically normalize
+*/
 	glClearColor(0.7f, 0.9f, 1.0f, 1.0f); //Change the background to sky blue
 }
 
-void initRenderingAux() {
-  //Makes 3D drawing work when something is in front of something else
-	glViewport(0,0,1,1);
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glOrtho(0,1,0,1,-1,1);
-	glMatrixMode(GL_MODELVIEW);
-}
+
 
 void handleResize(int w, int h) {
 	glViewport(0, 0, w, h);
@@ -182,23 +190,24 @@ void drawScene() {
 
 	glTranslatef(0,0,-8);
 
+/*
 		//Add ambient light
-	GLfloat ambientColor[] = {0.4, 0.4, 0.4, 1}; //Color (0.2, 0.2, 0.2)
+	GLfloat ambientColor[] = {0.4, 0.4, 0.4, 1};
 	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambientColor);
 	
 	//Add positioned light
-	GLfloat lightColor0[] = {0.5, 0.5, 0.5, 1}; //Color (0.5, 0.5, 0.5)
-	GLfloat lightPos0[] = {4, 0, 6, 1}; //Positioned at (4, 0, 8)
+	GLfloat lightColor0[] = {0.5, 0.5, 0.5, 1};
+	GLfloat lightPos0[] = {4, 0, 6, 1}; 
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightColor0);
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPos0);
-
+*/
 
 	glTranslatef(0, 0, Zoom);
 
 	glRotatef(angleY, 1, 0, 0);
 	glRotatef(angleX, 0, 1, 0);
 
-	//glTranslated(posX, posY, 0);
+	glTranslated(posX, posY, 0);
 
 
 	glLineWidth(Zoom);
@@ -207,6 +216,16 @@ void drawScene() {
 
 
   glutSwapBuffers();
+}
+void rotate(int value) {
+	if (autoRotate) {
+	++angleX;
+	if (angleX > 360) angleX -= 360;
+	glutPostRedisplay();
+}
+	if (t > 0) update(0);
+	else glutTimerFunc(50, rotate, 0);
+
 }
 
 void update(int value) {
@@ -252,10 +271,12 @@ void update(int value) {
 	t *= 0.99;
 	cout << "T: " << t << endl;
 
-
 	glutPostRedisplay();
-	if (t > 0.1)	glutTimerFunc(50, update, 0);
+	if (t < 0.4) rotate(0);
+	else glutTimerFunc(50, update, 0);
 }
+
+
 
 int main(int argc, char** argv) {
 	srand(time(0));
@@ -264,7 +285,7 @@ int main(int argc, char** argv) {
 
 	//"Space" = margin^3
 	//K = 
-	K = sqrt( (margin * margin) / g.edges*2);
+	K = sqrt( (margin * margin) / sqrt(g.edges));
 
 	setNodesPosition(g, margin);
 
@@ -273,7 +294,7 @@ int main(int argc, char** argv) {
 	glutInitWindowSize(screenWidth, screenHeight);
 	
 	//Create the window
-	glutCreateWindow("Graph drawing by Albert");
+	glutCreateWindow("Graph drawing by Albert, now in awesome 3D");
 	initRendering();
 	
 	//Set handler functions
