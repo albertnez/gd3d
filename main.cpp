@@ -52,7 +52,7 @@ float Zoom = -15;
 float angleX = 0;
 float angleY = 0;
 
-bool autoRotate = false;
+bool autoRotate = true;
 
 
 
@@ -84,7 +84,8 @@ void handleKeypress(unsigned char key, int x, int y) {
 	switch (key) {
     case 27: exit(0); break;
     case 's': t = 0; break;
-    case ' ': t += 10; break;
+    case 'a': t += 10; break;
+    case 'd': t = max(double(0), t-2); break;
     case 'r': angleX = angleY = 0; break;
     case 't': autoRotate = !autoRotate; break;
   }
@@ -272,7 +273,10 @@ void update(int value) {
 	cout << "T: " << t << endl;
 
 	glutPostRedisplay();
-	if (t < 0.4) rotate(0);
+	if (t < 0.4) {
+		t = 0;
+		rotate(0);
+	}
 	else glutTimerFunc(50, update, 0);
 }
 
